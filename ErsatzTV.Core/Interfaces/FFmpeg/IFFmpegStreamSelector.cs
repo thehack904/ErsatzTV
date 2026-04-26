@@ -14,6 +14,7 @@ public interface IFFmpegStreamSelector
         Channel channel,
         string preferredAudioLanguage,
         string preferredAudioTitle,
+        bool shouldLogMessages,
         CancellationToken cancellationToken);
 
     Task<Option<Subtitle>> SelectSubtitleStream(
@@ -21,5 +22,6 @@ public interface IFFmpegStreamSelector
         Channel channel,
         string preferredSubtitleLanguage,
         ChannelSubtitleMode subtitleMode,
+        bool shouldLogMessages,
         CancellationToken cancellationToken);
 }

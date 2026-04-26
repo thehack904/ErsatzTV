@@ -153,6 +153,7 @@ public class FFmpegLibraryProcessService : IFFmpegProcessService
                     channel,
                     preferredAudioLanguage,
                     preferredAudioTitle,
+                    shouldLogMessages: true,
                     cancellationToken);
 
             maybeSubtitle =
@@ -161,6 +162,7 @@ public class FFmpegLibraryProcessService : IFFmpegProcessService
                     channel,
                     preferredSubtitleLanguage,
                     subtitleMode,
+                    shouldLogMessages: true,
                     cancellationToken);
         }
 

@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
+using ErsatzTV.Application.Playouts;
 using ErsatzTV.Application.Subtitles;
 using ErsatzTV.Core;
 using ErsatzTV.Core.Domain;
@@ -131,9 +132,15 @@ public class UpdateChannelHandler(
 
         c.MirrorSourceChannelId = update.MirrorSourceChannelId;
         c.PlayoutOffset = update.PlayoutOffset;
+        c.StreamingEngine = update.StreamingEngine;
         c.StreamingMode = update.StreamingMode;
         c.WatermarkId = update.WatermarkId;
         c.FallbackFillerId = update.FallbackFillerId;
+
+        if (c.StreamingEngine is StreamingEngine.Next)
+        {
+            c.StreamingMode = StreamingMode.HttpLiveStreamingSegmenter;
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -154,6 +161,7 @@ public class UpdateChannelHandler(
         if (hasEpgChange)
         {
             await workerChannel.WriteAsync(new RefreshChannelData(c.Number), cancellationToken);
+            await workerChannel.WriteAsync(new SyncNextPlayout(c.Number), cancellationToken);
         }
 
         return ProjectToViewModel(c, c.Playouts?.Count ?? 0);

@@ -7,7 +7,6 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using BlazorSortable;
-using Bugsnag.AspNet.Core;
 using Dapper;
 using ErsatzTV.Application;
 using ErsatzTV.Application.Channels;
@@ -22,7 +21,6 @@ using ErsatzTV.Core.Images;
 using ErsatzTV.Core.Interfaces.Database;
 using ErsatzTV.Core.Interfaces.Emby;
 using ErsatzTV.Core.Interfaces.FFmpeg;
-using ErsatzTV.Core.Interfaces.GitHub;
 using ErsatzTV.Core.Interfaces.Images;
 using ErsatzTV.Core.Interfaces.Jellyfin;
 using ErsatzTV.Core.Interfaces.Locking;
@@ -57,7 +55,6 @@ using ErsatzTV.Infrastructure.Data.Repositories;
 using ErsatzTV.Infrastructure.Database;
 using ErsatzTV.Infrastructure.Emby;
 using ErsatzTV.Infrastructure.FFmpeg;
-using ErsatzTV.Infrastructure.GitHub;
 using ErsatzTV.Infrastructure.Health;
 using ErsatzTV.Infrastructure.Health.Checks;
 using ErsatzTV.Infrastructure.Images;
@@ -130,25 +127,6 @@ public class Startup
             options.ForwardLimit = 2;
             options.KnownIPNetworks.Clear();
             options.KnownProxies.Clear();
-        });
-
-        services.AddBugsnag(configuration =>
-        {
-            configuration.ApiKey = bugsnagConfig.ApiKey;
-            configuration.ProjectNamespaces = new[] { "ErsatzTV" };
-            configuration.AppVersion = Assembly.GetEntryAssembly()
-                ?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                ?.InformationalVersion ?? "unknown";
-            configuration.AutoNotify = true;
-
-            configuration.NotifyReleaseStages = new[] { "public", "develop" };
-
-#if DEBUG || DEBUG_NO_SYNC
-            configuration.ReleaseStage = "develop";
-#else
-            // effectively "disable" by tweaking app config
-            configuration.ReleaseStage = bugsnagConfig.Enable ? "public" : "private";
-#endif
         });
 
         services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(FileSystemLayout.DataProtectionFolder));
@@ -360,12 +338,7 @@ public class Startup
         string etvVersion = Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
             ?.InformationalVersion ?? "unknown";
 
-        Log.Logger.Information("ErsatzTV version {Version}", etvVersion);
-
-        Log.Logger.Warning(
-            "Report bugs to {GitHub} or contact us at {Contact}",
-            "https://github.com/ErsatzTV/ErsatzTV",
-            "https://ersatztv.org/contact");
+        Log.Logger.Information("ErsatzTV Legacy version {Version}", etvVersion);
 
         CopyMacOsConfigFolderIfNeeded();
 
@@ -389,7 +362,8 @@ public class Startup
             FileSystemLayout.MultiEpisodeShuffleTemplatesFolder,
             FileSystemLayout.AudioStreamSelectorScriptsFolder,
             FileSystemLayout.MpegTsScriptsFolder,
-            FileSystemLayout.DefaultMpegTsScriptFolder
+            FileSystemLayout.DefaultMpegTsScriptFolder,
+            FileSystemLayout.NextPlayoutsFolder,
         ];
 
         foreach (string directory in directoriesToCreate)
@@ -774,7 +748,6 @@ public class Startup
         services.AddScoped<IFileNotFoundHealthCheck, FileNotFoundHealthCheck>();
         services.AddScoped<IUnavailableHealthCheck, UnavailableHealthCheck>();
         services.AddScoped<IVaapiDriverHealthCheck, VaapiDriverHealthCheck>();
-        services.AddScoped<IErrorReportsHealthCheck, ErrorReportsHealthCheck>();
         services.AddScoped<IUnifiedDockerHealthCheck, UnifiedDockerHealthCheck>();
         services.AddScoped<IDowngradeHealthCheck, DowngradeHealthCheck>();
         services.AddScoped<IEmptyScheduleHealthCheck, EmptyScheduleHealthCheck>();
@@ -857,7 +830,6 @@ public class Startup
 
         services.AddScoped<ISongVideoGenerator, SongVideoGenerator>();
         services.AddScoped<IMusicVideoCreditsGenerator, MusicVideoCreditsGenerator>();
-        services.AddScoped<IGitHubApiClient, GitHubApiClient>();
         services.AddScoped<IHtmlSanitizer, HtmlSanitizer>(_ =>
         {
             var sanitizer = new HtmlSanitizer();
